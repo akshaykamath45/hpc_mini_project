@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prime Finder Benchmark</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 1.5rem;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .chart-box {
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    canvas {
+      max-width: 100%;
+    }
+    .info {
+      margin-top: 1rem;
+    }
+    .bar {
+      height: 20px;
+      margin: 0.5rem 0;
+      background: #2196F3;
+      transition: width 0.5s ease-in-out;
+    }
+    .bar.serial {
+      background: #f44336;
+    }
+    .bar.parallel {
+      background: #4CAF50;
+    }
+    .slider-container {
+      margin-bottom: 2rem;
+    }
+    input[type=range] {
+      width: 60%;
+    }
+    #rangeValue {
+      font-weight: bold;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Prime Number Finder Performance</h1>
+
+  <div class="slider-container">
+    <label for="range">Select Range End (Start = 1000):</label>
+    <input type="range" id="range" min="1000" max="1000000" step="100" value="100000">
+    <span id="rangeValue">100000</span>
+  </div>
+
+  <button onclick="runBenchmark()">Run Benchmark</button>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>Serial</h3>
+      <div class="bar serial" id="bar-serial" style="width:0%"></div>
+      <div class="info" id="info-serial"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Parallel CPU</h3>
+      <div class="bar parallel" id="bar-parallel" style="width:0%"></div>
+      <div class="info" id="info-parallel"></div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>Bar Chart</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Line Chart</h3>
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+  <div class="info" id="info-output"></div>
+
+  <script>
+    let barChart, lineChart;
+
+    document.getElementById('range').addEventListener('input', function() {
+      document.getElementById('rangeValue').innerText = this.value;
+    });
+
+    async function runBenchmark() {
+      const end = document.getElementById('range').value;
+      const res = await fetch(`/run_prime_benchmark?end=${end}`);
+      const data = await res.json();
+
+      document.getElementById('info-output').innerText = `Primes Found: ${data.count}`;
+
+      const labels = ['Serial', 'Parallel'];
+      const timeData = [data.serial_time.toFixed(2), data.parallel_time.toFixed(2)];
+      const cpuData = [data.serial_cpu, data.parallel_cpu];
+
+      document.getElementById('bar-serial').style.width = (100 - data.serial_time) + '%';
+      document.getElementById('bar-parallel').style.width = (100 - data.parallel_time) + '%';
+      document.getElementById('info-serial').innerText = `Time: ${data.serial_time.toFixed(2)}s | CPU: ${data.serial_cpu}%`;
+      document.getElementById('info-parallel').innerText = `Time: ${data.parallel_time.toFixed(2)}s | CPU: ${data.parallel_cpu}%`;
+
+      if (barChart) barChart.destroy();
+      if (lineChart) lineChart.destroy();
+
+      barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Execution Time (s)',
+            data: timeData,
+            backgroundColor: ['#f44336', '#2196F3']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      lineChart = new Chart(document.getElementById('lineChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'CPU Utilization (%)',
+            data: cpuData,
+            borderColor: '#4CAF50',
+            fill: false,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: { y: { min: 0, max: 100 } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
