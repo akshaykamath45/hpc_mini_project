@@ -3,6 +3,7 @@ import time
 import psutil
 import math
 import multiprocessing
+import os  # ✅ Added to read PORT environment variable
 
 app = Flask(__name__)
 
@@ -83,6 +84,7 @@ def run_benchmark():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Run Flask app
+# Run Flask app (✅ Render-compatible port binding)
 if __name__ == "__main__":
-    app.run(debug=True, port=2200)
+    port = int(os.environ.get("PORT", 10000))  # Use PORT from environment if set
+    app.run(host="0.0.0.0", port=port, debug=True)
